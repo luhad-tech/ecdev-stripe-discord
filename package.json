@@ -1,0 +1,20 @@
+{
+  "name": "ecdev-stripe-discord",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:luhad-tech/ecdev-stripe-discord.git",
+  "author": "Luhad",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon .",
+    "deploy": "node ./dcmds.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.11.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.44.0"
+  }
+}
