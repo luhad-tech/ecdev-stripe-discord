@@ -2,6 +2,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIPE_KEY);
+const endpointSecret = process.env.STRIPE_SECRET;
+const express = require('express');
+const app = express();
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -39,3 +43,47 @@ for (const file of eventFiles) {
 }
 
 client.login(process.env.D_TOKEN);
+
+// Stripe webhook
+
+app.post('/webhook', express.raw({ type: 'application/json' }), (request, response) => {
+	let sEvent = request.body;
+	// Only verify the event if you have an endpoint secret defined.
+	// Otherwise use the basic event deserialized with JSON.parse
+	if (endpointSecret) {
+	// Get the signature sent by Stripe
+		const signature = request.headers['stripe-signature'];
+		try {
+			sEvent = stripe.webhooks.constructEvent(
+				request.body,
+				signature,
+				endpointSecret,
+			);
+		}
+		catch (err) {
+			console.log('⚠️  Webhook signature verification failed.', err.message);
+			return response.sendStatus(400);
+		}
+	}
+	// Handle the event
+	switch (sEvent.type) {
+	case 'payment_intent.succeeded':
+		console.log(`PaymentIntent for ${sEvent.data.object.amount} was successful!`);
+		// Then define and call a method to handle the successful payment intent.
+		// handlePaymentIntentSucceeded(paymentIntent);
+		break;
+	case 'payment_method.attached':
+		// const paymentMethod = event.data.object;
+		// Then define and call a method to handle the successful attachment of a PaymentMethod.
+		// handlePaymentMethodAttached(paymentMethod);
+		break;
+	default:
+		// Unexpected event type
+		console.log(`Unhandled event type ${sEvent.type}.`);
+	}
+
+	// Return a 200 response to acknowledge receipt of the event
+	response.send();
+});
+
+app.listen(9925, () => console.log('Running on port 9925'));

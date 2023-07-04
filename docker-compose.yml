@@ -1,0 +1,14 @@
+services:
+  stripebot:
+    build: .
+    depends_on:
+      - reverseproxy
+
+  redis:
+    image: "redis:alpine"
+
+  reverseproxy:
+        image: nginx-proxy
+        ports:
+            - 80:80
+        restart: always
