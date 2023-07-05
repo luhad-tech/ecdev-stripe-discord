@@ -7,6 +7,15 @@ const endpointSecret = process.env.STRIPE_SECRET;
 const express = require('express');
 const app = express();
 
+const redis = require('redis');
+const rClient = redis.createClient({
+	socket: {
+		host: 'redis',
+	},
+});
+
+rClient.on('error', err => console.log('Redis Server Error', err));
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.commands = new Collection();
@@ -46,7 +55,7 @@ client.login(process.env.D_TOKEN);
 
 // Stripe webhook
 
-app.post('/webhook', express.raw({ type: 'application/json' }), (request, response) => {
+app.post('/webhook', express.raw({ type: 'application/json' }), async (request, response) => {
 	let sEvent = request.body;
 	// Only verify the event if you have an endpoint secret defined.
 	// Otherwise use the basic event deserialized with JSON.parse
@@ -66,6 +75,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (request, respon
 		}
 	}
 	// Handle the event
+	let pLinkData;
 	switch (sEvent.type) {
 	case 'payment_intent.succeeded':
 		console.log(`PaymentIntent for ${sEvent.data.object.amount} was successful!`);
@@ -76,6 +86,17 @@ app.post('/webhook', express.raw({ type: 'application/json' }), (request, respon
 		// const paymentMethod = event.data.object;
 		// Then define and call a method to handle the successful attachment of a PaymentMethod.
 		// handlePaymentMethodAttached(paymentMethod);
+		break;
+	case 'checkout.session.completed':
+		rClient.connect();
+		pLinkData = await rClient.get(sEvent.data.object.payment_link);
+		pLinkData = JSON.parse(pLinkData);
+		rClient.disconnect();
+		console.log('User ID ' + pLinkData.user);
+		console.log('Channel ID ' + pLinkData.channel);
+		client.channels.fetch(pLinkData.channel)
+			.then(c => c.send(`You purchase is complete <@${pLinkData.user}>! Thank you!`))
+			.catch(console.error);
 		break;
 	default:
 		// Unexpected event type

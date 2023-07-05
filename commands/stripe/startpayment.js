@@ -7,6 +7,14 @@
 const { SlashCommandBuilder } = require('discord.js');
 require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_KEY);
+const redis = require('redis');
+const rClient = redis.createClient({
+	socket: {
+		host: 'redis',
+	},
+});
+
+rClient.on('error', err => console.log('Redis Server Error', err));
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -21,9 +29,16 @@ module.exports = {
 				.setName('price')
 				.setDescription('Product price')
 				.setRequired(true))
+		.addUserOption(option =>
+			option
+				.setName('user')
+				.setDescription('User that is making the payment')
+				.setRequired(true))
 		.setDescription('Starts a stripe payment'),
 	async execute(interaction) {
 		const name = interaction.options.getString('name');
+		const user = interaction.options.getMember('user');
+		const channelId = interaction.channelId;
 		const numToCents = interaction.options.getInteger('price');
 		const product = await stripe.products.create({
 			name: name,
@@ -40,7 +55,24 @@ module.exports = {
 					quantity: 1,
 				},
 			],
+			custom_fields: [
+				{
+					key: 'discord',
+					label: {
+						type: 'custom',
+						custom: 'Discord Username',
+					},
+					type: 'text',
+				},
+			],
 		});
-		await interaction.reply(paymentLink.url);
+		const data = {
+			'user': user.id,
+			'channel': channelId,
+		};
+		await rClient.connect();
+		await rClient.set(paymentLink.id, JSON.stringify(data));
+		await rClient.disconnect();
+		await interaction.reply(`${user}, here is your payment link. DO NOT SHARE THIS LINK!\n${paymentLink.url}`);
 	},
 };
