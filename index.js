@@ -76,6 +76,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
 	}
 	// Handle the event
 	let pLinkData;
+	const guild = await client.guilds.fetch(process.env.D_GUILDID);
 	switch (sEvent.type) {
 	case 'payment_intent.succeeded':
 		console.log(`PaymentIntent for ${sEvent.data.object.amount} was successful!`);
@@ -92,8 +93,10 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
 		pLinkData = await rClient.get(sEvent.data.object.payment_link);
 		pLinkData = JSON.parse(pLinkData);
 		rClient.disconnect();
-		console.log('User ID ' + pLinkData.user);
-		console.log('Channel ID ' + pLinkData.channel);
+
+		guild.members.addRole({ user: pLinkData.user, role: process.env.G_ROLEID });
+
+		console.log(`THIS SHOULD NOT BE NULLLLLLLLL \n\n\n\n\n\n\n\n\n${pLinkData.user} + ${process.env.G_ROLEID}`);
 		client.channels.fetch(pLinkData.channel)
 			.then(c => c.send(`You purchase is complete <@${pLinkData.user}>! Thank you!`))
 			.catch(console.error);
