@@ -70,9 +70,18 @@ module.exports = {
 			'user': user.id,
 			'channel': channelId,
 		};
+		const payLinkEm = {
+			title: '[your company here] Payments',
+			description: `${user}, here is your payment link. DO NOT SHARE THIS LINK!\n${paymentLink.url}`,
+			color: 6779621,
+			thumbnail: {
+				url: 'https://www.nicepng.com/png/full/870-8701139_your-logo-here-png-gloucester-road-tube-station.png',
+			},
+		};
 		await rClient.connect();
 		await rClient.set(paymentLink.id, JSON.stringify(data));
 		await rClient.disconnect();
-		await interaction.reply(`${user}, here is your payment link. DO NOT SHARE THIS LINK!\n${paymentLink.url}`);
+		// `${user}, here is your payment link. DO NOT SHARE THIS LINK!\n${paymentLink.url}`
+		await interaction.reply({ embeds: [payLinkEm] });
 	},
 };

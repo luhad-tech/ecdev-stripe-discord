@@ -76,6 +76,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
 	}
 	// Handle the event
 	let pLinkData;
+	let payComEmbed;
 	const guild = await client.guilds.fetch(process.env.D_GUILDID);
 	switch (sEvent.type) {
 	case 'checkout.session.completed':
@@ -87,10 +88,18 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
 			sEvent.data.object.payment_link,
 			{ active: false },
 		);
+		payComEmbed = {
+			title: '[your company here] Payments',
+			description: `You purchase is complete <@${pLinkData.user}>! Thank you!`,
+			color: 2752256,
+			thumbnail: {
+				url: 'https://em-content.zobj.net/source/animated-noto-color-emoji/356/check-mark-button_2705.gif',
+			},
+		};
 		guild.members.addRole({ user: pLinkData.user, role: process.env.G_ROLEID })
 			.catch(console.error);
 		client.channels.fetch(pLinkData.channel)
-			.then(c => c.send(`You purchase is complete <@${pLinkData.user}>! Thank you!`))
+			.then(c => c.send({ embeds: [payComEmbed] }))
 			.catch(console.error);
 		break;
 	default:
